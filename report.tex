@@ -37,21 +37,21 @@ First, we analysed what are the authorizations that our system wants to propose.
 
 We can also note that we took care of discarding the no-subscription case: we decided to not authorize a user to subscribe to nothing as it would make no sense even in a regular subscription model. This avoids useless computations and having users making queries for nothing which could generate a cost. Nonetheless, the anonymous credential system we implemented could support it without the input verification made.
 
-Finally, as suggested, we also added as attribute a unique (big enough to have low collision probability) random number. This one is usually not shown to the issuer or verifier (as breaking the desired unlinkability with subsequent showings) but can reveal to be useful in some critical operations. Indeed, we could imagine judicial circumstances were some party would like to assert that they did not steal each other's credential. They could do so by showing their hidden unique user attribute.
+Finally, as suggested, we also added as attribute a unique (big random number to have low collision probability) random number. This one is usually not shown to the issuer or verifier (as breaking the desired unlinkability with subsequent showings) but can reveal to be useful in some critical operations. Indeed, we could imagine judicial circumstances were some party would like to assert that they did not steal each other's credential. They could do so by showing their hidden unique user attribute.
 \subsection{Mapping to the \texttt{AttributeMap}}
 \subsubsection{Attribute representation}
-Considering the above discussion, we made choices for attributes accordingly. We decided to represent our attributes by \texttt{Bn} of the \texttt{petrelic.bn} class. This makes computations in \texttt{credential.py} very handy as we can directly run computations on the attributes: use them as exponents of $G_1$ elements as described in the Attribute Based Credentials guide. We must note that we'll only manipulate numbers modulo $|G_1|$ (noting that on our curve, $|G_1|=|G_2|=|G_T|$). Indeed, this serves 2 purposes: first, for serialization, \texttt{petrelic} requires strictly positive \texttt{Bn}. Secondly, the security of our system requires manipulation of numbers modulo the order of the used group. Notably, when in the proofs of knowledge, the prover sends the responses corresponding to the challenge, those must be sent modulo $|G_1|$ if we do not want an observer having the challenge to deduce information about the key value. We made sure to hold modulo $|G_1|$ values at conversions from string/bytes or at the construction of the objects holding those values that we defined (\texttt{SecretKey}, \texttt{PublicKey}, \texttt{PedersonKnowledgeProof}).
+Considering the above discussion, we made choices for attributes accordingly. We decided to represent our attributes by \texttt{Bn} of the \texttt{petrelic.bn} class. This makes computations in \texttt{credential.py} very handy as we can directly run computations on the attributes: use them as exponents of $G_1$ elements as described in the ABC guide. We must note that we'll only manipulate numbers modulo $|G_1|$ (noting that on our curve, $|G_1|=|G_2|=|G_T|$). Indeed, this serves 2 purposes: first, for serialization, \texttt{petrelic} requires strictly positive \texttt{Bn}. Secondly, the security of our system requires manipulation of numbers modulo the order of the used group. Notably, in the proofs of knowledge, the prover sends the responses corresponding to the challenge, those must be sent modulo $|G_1|$ if we do not want an observer having the challenge to deduce information about the key value. We made sure to hold modulo $|G_1|$ values at conversions from string/bytes or at the construction of the objects holding those values that we defined (\texttt{SecretKey}, \texttt{PublicKey}, \texttt{PedersonKnowledgeProof}).
 
 \subsubsection{From string/bytes to the attribute}
-In the system's initialization, the server's recognized subscriptions are received as strings. From the run examples, those are human readable names representing the names of the classes of points of interest. To represent those as attributes, we can easily use \texttt{.encode()} function to represent as bytes our string and finally use the \texttt{Bn.from\_binary()} function to have a BigNumber. Note that we must thereafter put our big number modulo $|G_1|$ and that this function is not strictly one to one as the size of $|G_1|$ is limited but considering the number of meaningful subscriptions name that is very limited, this is acceptable to us.
+In the system's initialization, the server's recognized subscriptions are received as strings. From the run examples, those are human readable names representing the names of the classes of points of interest. To represent those as bytes, we can easily use \texttt{.encode()} and finally use the \texttt{Bn.from\_binary()} function to have a BigNumber. Note that we must thereafter put our big number modulo $|G_1|$ and that this function is not strictly one to one as the size of $|G_1|$ is limited but considering the number of meaningful subscriptions name that is very limited (there are at most around a million of English words\cite{noauthor_how_2020}), this is acceptable to us.
 \subsubsection{\texttt{AttributeMap} object}
-Our \texttt{AttributeMap} object is therefore represented by a \texttt{dict} mapping an integer to the value of our attribute. We made the choice to always, in a system with $L$ subscriptions (decided by the server at initialization), give a credential to a user for $L+1$ attributes: the first one being the random number and the others being either the Bn representation of the subscription string name, or the Bn representation of the string "None", representing the fact that a user is not subscribed. This allows us to easily verify paid subscriptions on showing: if the user can show a valid credential for a subscription name, they can access the service, if they show a valid credential but for None, they can be refused. In a system where subscriptions are "restaurant", "park" and "hotel" and we have a user subscribed to "park" and "hotel", the corresponding \texttt{AttributeMap} would be:
+Our \texttt{AttributeMap} object is therefore represented by a \texttt{dict} mapping an integer to the value of our attribute. We made the choice to always, in a system with $L$ subscriptions (decided by the server at initialization), give a credential to a user for $L+1$ attributes: the first one being the random number and the others being either the \texttt{Bn} representation of the subscription string name, or the \texttt{Bn} representation of the string "None", representing the fact that a user is not subscribed. This allows us to easily verify paid subscriptions on showing: if the user can show a valid credential for a subscription name, they can access the service, if they show a valid credential but for None, they can be refused, if they show a non valid credential, this should be verifiable by the proof of knowledge. In a system where subscriptions are "restaurant", "park" and "hotel" and we have a user subscribed to "park" and "hotel" only, the corresponding \texttt{AttributeMap} would be:
 \begin{center}
 \begin{tabular}{||c c||} 
  \hline
  Attr index & Value \\ [0.5ex] 
  \hline\hline
- 1 & a random number (unique per credential) \\ 
+ 1 & a random \texttt{Bn} \\ 
  \hline
  2 & \texttt{Bn("None")} \\
  \hline
@@ -63,37 +63,7 @@ Our \texttt{AttributeMap} object is therefore represented by a \texttt{dict} map
 \end{center}
 This objects presents the double advantage of not leaking by its length, the number of subscriptions a user had taken (assuming all Bn are represented by the same number of bytes) while being very convinient to manipulate for computations. Indeed, we always have access to the pair index,value, allowing the get the index of the correct $Y_i$ public key value along with the $a_i$ attribute value (with notations from the ABC credentials guide).
 \subsection{Going non-interactive}
-
-The implementation of \texttt{stroll.py} interprets location subscriptions as a list of strings e.g. $[``cafeteria", ``restaurant", ``laboratory", ``bar", ``dojo"]$. 
-We encoded these subscriptions in \texttt{credentials.py} as an AttributeMap, defined as a dictionary with integer indices and Bn values. 
-
-We chose to use the dictionary data structure in order to have better control on the order of the attributes, as the mapping between indices and attributes plays an important role in attribute-based credentials. We map the string representation of a location subscriptions, $sub$, to it's big number value, $attribute$, as follows: 
-
-$attribute = mod(strToBn(sub), ord(G1))$
-
-Where $ord()$ gives the order of a group and $strToBn()$ gives the big number representation of a string. Note that here we take the modulo in order to ensure we have a positive value, which is necessary for the \texttt{jsonpickle} serialization. 
-
-In addition to this, we chose to pad every AttributeMap to the size of the total number of possible subscriptions. The indexes for which there is no user subscription, i.e. no attribute, will contain the big number representation of "None", \textcolor{purple}{$Bn(1315925605)$}. For example, given the following list of possible subscriptions: 
-
-$[``cafeteria", ``restaurant", ``laboratory", ``bar", ``dojo"]$ 
-
-\noindent
-and Alice's location subscriptions:  
-
-$[``cafeteria", ``bar", ``dojo"]$ 
-
-\noindent
-the corresponding AttributeMap will be:
-
-\noindent
-$\{1: Bn(1885434475), \\ 
-2: $\textcolor{purple}{$\ Bn(1315925605)$}$, \\
-3: $\textcolor{purple}{$\ Bn(1315925605)$}$, \\
-4: Bn(120351214630253), \\
-5: Bn(1834974328265520539237)\}$
-
-
-We decided to add this padding in order to avoid information leakage on the user's subscriptions from the size of the corresponding AttributeMap. 
+After defining the attributes and our credential with the PS scheme, we finally must re-define our proofs of knowledge. Considering the fact that our secrets are, in both proofs, bounded to equations defined by the product of some group elements known to both parties ($Y_i$ or $e(\sigma',\Tilde{Y}_i)$ for example) raised to the power of our secrets ($t$ or $a_i$). This made us think about the Pedersen commitment scheme. We implemented our proofs of knowledge following this idea as described in the Exercise Set 1.2 Solutions.
 
 \subsection{Test}
 \textbf{How did you test the system?
