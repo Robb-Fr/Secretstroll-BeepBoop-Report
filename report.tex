@@ -33,6 +33,37 @@ Provide a brief introduction about the aim of the project, and your road-map abo
 Explain how you mapped the system to the attribute based credential. How did you
 use the Fiat-Shamir heuristic?
 
+The implementation of \texttt{stroll.py} interprets location subscriptions as a list of strings e.g. $[``cafeteria", ``restaurant", ``laboratory", ``bar", ``dojo"]$. 
+We encoded these subscriptions in \texttt{credentials.py} as an AttributeMap, defined as a dictionary with integer indices and Bn values. 
+
+We chose to use the dictionary data structure in order to have better control on the order of the attributes, as the mapping between indices and attributes plays an important role in attribute-based credentials. We map the string representation of a location subscriptions, $sub$, to it's big number value, $attribute$, as follows: 
+
+$attribute = mod(strToBn(sub), ord(G1))$
+
+Where $ord()$ gives the order of a group and $strToBn()$ gives the big number representation of a string. Note that here we take the modulo in order to ensure we have a positive value, which is necessary for the \texttt{jsonpickle} serialization. 
+
+In addition to this, we chose to pad every AttributeMap to the size of the total number of possible subscriptions. The indexes for which there is no user subscription, i.e. no attribute, will contain the big number representation of "None", \textcolor{purple}{$Bn(1315925605)$}. For example, given the following list of possible subscriptions: 
+
+$[``cafeteria", ``restaurant", ``laboratory", ``bar", ``dojo"]$ 
+
+\noindent
+and Alice's location subscriptions:  
+
+$[``cafeteria", ``bar", ``dojo"]$ 
+
+\noindent
+the corresponding AttributeMap will be:
+
+\noindent
+$\{1: Bn(1885434475), \\ 
+2: $\textcolor{purple}{$\ Bn(1315925605)$}$, \\
+3: $\textcolor{purple}{$\ Bn(1315925605)$}$, \\
+4: Bn(120351214630253), \\
+5: Bn(1834974328265520539237)\}$
+
+
+We decided to add this padding in order to avoid information leakage on the user's subscriptions from the size of the corresponding AttributeMap. 
+
 \subsection{Test}
 How did you test the system?
 You need to test the correct path and at least two failure paths.
