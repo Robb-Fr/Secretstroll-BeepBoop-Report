@@ -43,9 +43,25 @@ Finally, as suggested, we also added as attribute a unique (big enough to have l
 Considering the above discussion, we made choices for attributes accordingly. We decided to represent our attributes by \texttt{Bn} of the \texttt{petrelic.bn} class. This makes computations in \texttt{credential.py} very handy as we can directly run computations on the attributes: use them as exponents of $G_1$ elements as described in the Attribute Based Credentials guide. We must note that we'll only manipulate numbers modulo $|G_1|$ (noting that on our curve, $|G_1|=|G_2|=|G_T|$). Indeed, this serves 2 purposes: first, for serialization, \texttt{petrelic} requires strictly positive \texttt{Bn}. Secondly, the security of our system requires manipulation of numbers modulo the order of the used group. Notably, when in the proofs of knowledge, the prover sends the responses corresponding to the challenge, those must be sent modulo $|G_1|$ if we do not want an observer having the challenge to deduce information about the key value. We made sure to hold modulo $|G_1|$ values at conversions from string/bytes or at the construction of the objects holding those values that we defined (\texttt{SecretKey}, \texttt{PublicKey}, \texttt{PedersonKnowledgeProof}).
 
 \subsubsection{From string/bytes to the attribute}
-
+In the system's initialization, the server's recognized subscriptions are received as strings. From the run examples, those are human readable names representing the names of the classes of points of interest. To represent those as attributes, we can easily use \texttt{.encode()} function to represent as bytes our string and finally use the \texttt{Bn.from\_binary()} function to have a BigNumber. Note that we must thereafter put our big number modulo $|G_1|$ and that this function is not strictly one to one as the size of $|G_1|$ is limited but considering the number of meaningful subscriptions name that is very limited, this is acceptable to us.
 \subsubsection{\texttt{AttributeMap} object}
-Our \texttt{AttributeMap} object is therefore represented by a \texttt{dict} mapping an integer to the value of our attribute. At the system initialization, the server decides on the accepted subscriptions
+Our \texttt{AttributeMap} object is therefore represented by a \texttt{dict} mapping an integer to the value of our attribute. We made the choice to always, in a system with $L$ subscriptions (decided by the server at initialization), give a credential to a user for $L+1$ attributes: the first one being the random number and the others being either the Bn representation of the subscription string name, or the Bn representation of the string "None", representing the fact that a user is not subscribed. This allows us to easily verify paid subscriptions on showing: if the user can show a valid credential for a subscription name, they can access the service, if they show a valid credential but for None, they can be refused. In a system where subscriptions are "restaurant", "park" and "hotel" and we have a user subscribed to "park" and "hotel", the corresponding \texttt{AttributeMap} would be:
+\begin{center}
+\begin{tabular}{||c c||} 
+ \hline
+ Attr index & Value \\ [0.5ex] 
+ \hline\hline
+ 1 & a random number (unique per credential) \\ 
+ \hline
+ 2 & \texttt{Bn("None")} \\
+ \hline
+ 3 & \texttt{Bn("park")} \\
+ \hline
+ 4 & \texttt{Bn("hotel")} \\
+ \hline
+\end{tabular}
+\end{center}
+This objects presents the double advantage of not leaking by its length, the number of subscriptions a user had taken (assuming all Bn are represented by the same number of bytes) while being very convinient to manipulate for computations. Indeed, we always have access to the pair index,value, allowing the get the index of the correct $Y_i$ public key value along with the $a_i$ attribute value (with notations from the ABC credentials guide).
 \subsection{Going non-interactive}
 
 The implementation of \texttt{stroll.py} interprets location subscriptions as a list of strings e.g. $[``cafeteria", ``restaurant", ``laboratory", ``bar", ``dojo"]$. 
