@@ -27,11 +27,26 @@
 
 \section{Introduction}
 
-Provide a brief introduction about the aim of the project, and your road-map about the design/implementation for each sub-part.
+\textbf{Provide a brief introduction about the aim of the project, and your road-map about the design/implementation for each sub-part.}
 
 \section{Attribute-based credential}
-Explain how you mapped the system to the attribute based credential. How did you
-use the Fiat-Shamir heuristic?
+\textbf{Explain how you mapped the system to the attribute based credential. How did you
+use the Fiat-Shamir heuristic?}
+\subsection{System's attributes}
+First, we analysed what are the authorizations that our system wants to propose. From the handout, we came to the conclusion that each subscription should require a specific authorization. Indeed, a user should be able to take any subset of subscriptions in a regular "pay per subscription" model as it is described.
+
+We can also note that we took care of discarding the no-subscription case: we decided to not authorize a user to subscribe to nothing as it would make no sense even in a regular subscription model. This avoids useless computations and having users making queries for nothing which could generate a cost. Nonetheless, the anonymous credential system we implemented could support it without the input verification made.
+
+Finally, as suggested, we also added as attribute a unique (big enough to have low collision probability) random number. This one is usually not shown to the issuer or verifier (as breaking the desired unlinkability with subsequent showings) but can reveal to be useful in some critical operations. Indeed, we could imagine judicial circumstances were some party would like to assert that they did not steal each other's credential. They could do so by showing their hidden unique user attribute.
+\subsection{Mapping to the \texttt{AttributeMap}}
+\subsubsection{Attribute representation}
+Considering the above discussion, we made choices for attributes accordingly. We decided to represent our attributes by \texttt{Bn} of the \texttt{petrelic.bn} class. This makes computations in \texttt{credential.py} very handy as we can directly run computations on the attributes: use them as exponents of $G_1$ elements as described in the Attribute Based Credentials guide. We must note that we'll only manipulate numbers modulo $|G_1|$ (noting that on our curve, $|G_1|=|G_2|=|G_T|$). Indeed, this serves 2 purposes: first, for serialization, \texttt{petrelic} requires strictly positive \texttt{Bn}. Secondly, the security of our system requires manipulation of numbers modulo the order of the used group. Notably, when in the proofs of knowledge, the prover sends the responses corresponding to the challenge, those must be sent modulo $|G_1|$ if we do not want an observer having the challenge to deduce information about the key value. We made sure to hold modulo $|G_1|$ values at conversions from string/bytes or at the construction of the objects holding those values that we defined (\texttt{SecretKey}, \texttt{PublicKey}, \texttt{PedersonKnowledgeProof}).
+
+\subsubsection{From string/bytes to the attribute}
+
+\subsubsection{\texttt{AttributeMap} object}
+Our \texttt{AttributeMap} object is therefore represented by a \texttt{dict} mapping an integer to the value of our attribute. At the system initialization, the server decides on the accepted subscriptions
+\subsection{Going non-interactive}
 
 The implementation of \texttt{stroll.py} interprets location subscriptions as a list of strings e.g. $[``cafeteria", ``restaurant", ``laboratory", ``bar", ``dojo"]$. 
 We encoded these subscriptions in \texttt{credentials.py} as an AttributeMap, defined as a dictionary with integer indices and Bn values. 
@@ -65,13 +80,13 @@ $\{1: Bn(1885434475), \\
 We decided to add this padding in order to avoid information leakage on the user's subscriptions from the size of the corresponding AttributeMap. 
 
 \subsection{Test}
-How did you test the system?
-You need to test the correct path and at least two failure paths.
+\textbf{How did you test the system?
+You need to test the correct path and at least two failure paths.}
 
 \subsection{Evaluation}
-Evaluate your ABC: report communication and computation stats (mean and standard
+\textbf{Evaluate your ABC: report communication and computation stats (mean and standard
 deviation). Report statistic on key generation, issuance, signing, and
-verification.
+verification.}
 
 \section{(De)Anonymization of User Trajectories}
 
