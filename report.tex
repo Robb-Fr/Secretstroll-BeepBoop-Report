@@ -14,7 +14,7 @@
 
 \title{CS-523 SecretStroll Report}
 \author{Manon Michel, Tom Demont}
-\date{April 2020}
+\date{April 2022}
 
 \begin{document}
 
@@ -151,6 +151,8 @@ In reality, we could remove the timestamp entirely but it is harder to measure t
 \centering
 \begin{tabular}{ |c|c|c|c| } 
 \hline
+ &  & \multicolumn{2}{c|}{Avg anonymity set size} \\
+ \hline
 timestamp & location & grid cells & coordinates\\
 \hline
 \hline
@@ -237,11 +239,11 @@ For the training part, we used the Random Tree Classifier suggested by the skele
 We evaluated using 10-fold cross validation on 4 performance metrics:
 \begin{itemize}
     \item Accuracy: the average rate of predictions corresponding to the correct test label
-    \item Top 2 accuracy: using the classifier's full prediction distribution for each label, we sorted those in decreasing order of probability. This metrics is the classic accuracy but considers as correct a prediction where one of the top 2 predicted labels is the correct label.
+    \item Top 2 accuracy: using the classifier's full prediction distribution for each label, we sorted those in decreasing order of probability. This metric is the classic accuracy but considers as correct a prediction where one of the top 2 predicted labels is the correct label.
     \item Top 10 accuracy: same as top 2 accuracy, this one considers the 10 most probable predicted labels.
-    \item True positive: in the same way as the top 2 and top 10, we here took every prediction output by the classifier with a non-null predicted probability. If the correct label is among those predictions, we say it's a true positive (the classifier did not discard the correct option).
+    \item True positive: in the same way as the top 2 and top 10, we here took every prediction output by the classifier with a non-null predicted probability. If the correct label is among these predictions, we say it's a true positive (the classifier did not discard the correct option).
 \end{itemize}
-The results are in average the following over the 10-folds cross-validation are in the Table \ref{tab:class_perf}:
+The results are on average over the 10-folds cross-validation can be found in Table \ref{tab:class_perf}:
 \begin{table}[h!]
 \centering
 \begin{tabular}{ |c|c| } 
@@ -260,11 +262,11 @@ true positive & 97\% \\
 
 \subsection{Discussion and Countermeasures}
 
-In order to get those results, we tweaked the selected data and classifier parameters. We tried to filter the data columns imported and kept the best results we observed. In the final version, the time and round timestamps columns are excluded as decreasing our accuracy by almost 10\%. We suppose that our data collection not being perfect (the timing of the script changed over the captures, some sleep were introduced etc...), this time data was very noisy. Moreover, as explained, the order of magnitude of computation timing differences observed in Fig. \ref{fig:grid_query_no_tor} orders of magnitude far from the tor network time overhead. Therefore, our supposition is that time correlation in traces mainly come from the transfer time of the transmitted volume and reflects just a noisier data representing the rounds volume.
+In order to get these results, we tweaked the selected data and classifier parameters. We tried to filter the data columns imported and kept the best results we observed. In the final version, the time and round timestamps columns are discarded as they decreased our accuracy by almost 10\%. We suppose that our data collection not being perfect (the timing of the script changed over the captures, some sleep was introduced etc...), this time data was too noisy. Moreover, as explained, the order of magnitude of computation timing differences observed in Fig. \ref{fig:grid_query_no_tor} orders of magnitude far from the tor network time overhead. Therefore, our supposition is that time correlation in traces mainly come from the transfer time of the transmitted volume and reflects just a noisier data representing the rounds volume.
 
-Finally, we tried but did not keep many modifications on the classifier parameters. We only observed better results when increasing the default number of estimators from 100 to around 260. Further increase did not yield significantly better results. We found that this correlates particularly nicely with the number of features in our training data, which gave us the impression that having at least one tree making decision for every round size feature yield good results.
+Finally, we tried but did not keep many modifications on the classifier parameters. We only observed better results when increasing the default number of estimators from 100 to around 260. Further increase did not yield significantly better results. We found that this correlates particularly nicely with the number of features in our training data, which gave us the impression that having at least one tree making decision for every round size feature yields good results.
 
-In order to counter this model, we must come back to our ideas in feature extraction. Indeed, the data has high dimensionality because the sequence of round sizes reveals the number of PoIs and even qualifies them by the size of their ratings. To reduce this, we could, without any utility reduction, shuffle the list of returned PoI by the server so that the client does not query those in the same order every time. Another idea would be to not send the full ratings for each PoI: only some key statistics are necessary and would reduce and normalize the size of every round. Finally, the "round" nature gives information. We could make the client query for multiple PoI at a time instead of making successive sequential rounds, so that it's harder to observe the signal of a round query.
+In order to counter this model, we must come back to our ideas in feature extraction. Indeed, the data has high dimensionality because the sequence of round sizes reveals the number of PoIs and even qualifies them by the size of their ratings. To reduce this, we could, without any utility reduction, shuffle the list of returned PoI by the server so that the client does not query those in the same order every time. Another idea would be to not send the full ratings for each PoI: only some key statistics are necessary and would reduce and normalize the size of every round. Finally, the "round" nature gives information. We could make the client query for multiple PoIs at a time instead of making successive sequential rounds, so that it's harder to observe the signal of a round query.
 \bibliographystyle{IEEEtran}
 \bibliography{bib}
 \end{document}
